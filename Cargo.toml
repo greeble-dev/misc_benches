@@ -1,0 +1,13 @@
+[package]
+name = "memcpy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+criterion = "0.5.1"
+rand = "0.9"
+rand_chacha = "0.9"
+
+[[bench]]
+name = "benches"
+harness = false
