@@ -13,9 +13,10 @@ pub fn system(_: &mut Criterion) {
     );
 
     println!(
-        "os: {} / {}",
-        System::long_os_version().unwrap_or_else(|| String::from("not available")),
-        System::kernel_version().unwrap_or_else(|| String::from("not available")),
+        "os: {} / {} / {}",
+        System::long_os_version().unwrap_or("not available".to_string()),
+        System::kernel_version().unwrap_or("not available".to_string()),
+        System::cpu_arch().unwrap_or("not available".to_string()),
     );
 
     println!(
@@ -23,11 +24,18 @@ pub fn system(_: &mut Criterion) {
         sys.cpus()
             .first()
             .map(|cpu| cpu.brand().trim().to_string())
-            .unwrap_or_else(|| String::from("not available")),
+            .unwrap_or("not available".to_string())
     );
 
     println!(
-        "mem: {:.1} GiB",
+        "cores: {}",
+        sys.physical_core_count()
+            .map(|cores| cores.to_string())
+            .unwrap_or("not available".to_string()),
+    );
+
+    println!(
+        "mem: {:.1} GB",
         sys.total_memory() as f64 * (1.0 / (1024.0 * 1024.0 * 1024.0))
     );
 }
