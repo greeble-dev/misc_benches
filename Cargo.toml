@@ -1,12 +1,13 @@
 [package]
-name = "memcpy"
+name = "misc_benches"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 criterion = "0.5.1"
-rand = "0.9"
-rand_chacha = "0.9"
+rand = "0.8"
+bevy_transform = "0.15"
+bevy_math = "0.15"
 
 [[bench]]
 name = "benches"
