@@ -107,23 +107,28 @@ fn mul_normalize_true(l: &Transform, r: &Transform) -> Transform {
     }
 }
 
-fn transform_normalize_inner<F>(dst: &mut [Transform], src: &[&[Transform]; 2], f: F)
+struct TransformNormalizeParams<'a> {
+    dst: &'a mut [Transform],
+    src: &'a [&'a [Transform]; 2],
+}
+
+fn transform_normalize_inner<F>(params: &mut TransformNormalizeParams, f: F)
 where
     F: Fn(&Transform, &Transform) -> Transform,
 {
-    for i in 0..dst.len() {
-        dst[i] = f(&src[0][i], &src[1][i]);
+    for i in 0..params.dst.len() {
+        params.dst[i] = f(&params.src[0][i], &params.src[1][i]);
     }
 }
 
 #[inline(never)]
-fn transform_normalize_false(dst: &mut [Transform], src: &[&[Transform]; 2]) {
-    transform_normalize_inner(dst, src, mul_normalize_false);
+fn transform_normalize_false(params: &mut TransformNormalizeParams) {
+    transform_normalize_inner(params, mul_normalize_false);
 }
 
 #[inline(never)]
-fn transform_normalize_true(dst: &mut [Transform], src: &[&[Transform]; 2]) {
-    transform_normalize_inner(dst, src, mul_normalize_true);
+fn transform_normalize_true(params: &mut TransformNormalizeParams) {
+    transform_normalize_inner(params, mul_normalize_true);
 }
 
 pub fn transform_normalize(c: &mut Criterion) {
@@ -135,21 +140,23 @@ pub fn transform_normalize(c: &mut Criterion) {
 
     let mut rng = StdRng::seed_from_u64(1234);
 
-    let mut dst = vec![Transform::IDENTITY; COUNT];
-    let src = [
-        random_transform_array(&mut rng, COUNT),
-        random_transform_array(&mut rng, COUNT),
-    ];
+    let mut params = TransformNormalizeParams {
+        dst: &mut vec![Transform::IDENTITY; COUNT],
+        src: &[
+            &random_transform_array(&mut rng, COUNT),
+            &random_transform_array(&mut rng, COUNT),
+        ],
+    };
 
     group.bench_function(format!("count = {COUNT}, normalize = false"), |b| {
         b.iter(|| {
-            transform_normalize_false(&mut dst, &[&src[0], &src[1]]);
+            transform_normalize_false(&mut params);
         })
     });
 
     group.bench_function(format!("count = {COUNT}, normalize = true"), |b| {
         b.iter(|| {
-            transform_normalize_true(&mut dst, &[&src[0], &src[1]]);
+            transform_normalize_true(&mut params);
         })
     });
 }
@@ -176,71 +183,40 @@ fn rotate_axis_normalize_reactive(dst: &mut Transform, src: Transform, axis: Dir
     }
 }
 
-fn rotate_axis_normalize_inner<F>(
-    dst_array: &mut [Transform],
-    src_array: &[Transform],
-    axis_array: &[Dir3],
-    angle_array: &[f32],
-    f: F,
-) where
+struct RotateAxisParams<'a> {
+    dst_array: &'a mut [Transform],
+    src_array: &'a [Transform],
+    axis_array: &'a [Dir3],
+    angle_array: &'a [f32],
+}
+
+fn rotate_axis_normalize_inner<F>(params: &mut RotateAxisParams, f: F)
+where
     F: Fn(&mut Transform, Transform, Dir3, f32),
 {
-    for i in 0..dst_array.len() {
+    for i in 0..params.dst_array.len() {
         f(
-            &mut dst_array[i],
-            src_array[i],
-            axis_array[i],
-            angle_array[i],
+            &mut params.dst_array[i],
+            params.src_array[i],
+            params.axis_array[i],
+            params.angle_array[i],
         );
     }
 }
 
 #[inline(never)]
-fn rotate_axis_normalize_false_outer(
-    dst_array: &mut [Transform],
-    src_array: &[Transform],
-    axis_array: &[Dir3],
-    angle_array: &[f32],
-) {
-    rotate_axis_normalize_inner(
-        dst_array,
-        src_array,
-        axis_array,
-        angle_array,
-        rotate_axis_normalize_false,
-    );
+fn rotate_axis_normalize_false_outer(params: &mut RotateAxisParams) {
+    rotate_axis_normalize_inner(params, rotate_axis_normalize_false);
 }
 
 #[inline(never)]
-fn rotate_axis_normalize_true_outer(
-    dst_array: &mut [Transform],
-    src_array: &[Transform],
-    axis_array: &[Dir3],
-    angle_array: &[f32],
-) {
-    rotate_axis_normalize_inner(
-        dst_array,
-        src_array,
-        axis_array,
-        angle_array,
-        rotate_axis_normalize_true,
-    );
+fn rotate_axis_normalize_true_outer(params: &mut RotateAxisParams) {
+    rotate_axis_normalize_inner(params, rotate_axis_normalize_true);
 }
 
 #[inline(never)]
-fn rotate_axis_normalize_reactive_outer(
-    dst_array: &mut [Transform],
-    src_array: &[Transform],
-    axis_array: &[Dir3],
-    angle_array: &[f32],
-) {
-    rotate_axis_normalize_inner(
-        dst_array,
-        src_array,
-        axis_array,
-        angle_array,
-        rotate_axis_normalize_reactive,
-    );
+fn rotate_axis_normalize_reactive_outer(params: &mut RotateAxisParams) {
+    rotate_axis_normalize_inner(params, rotate_axis_normalize_reactive);
 }
 
 pub fn rotate_axis_normalize(c: &mut Criterion) {
@@ -252,36 +228,28 @@ pub fn rotate_axis_normalize(c: &mut Criterion) {
 
     let mut rng = StdRng::seed_from_u64(1234);
 
-    let mut dst_array = vec![Transform::IDENTITY; COUNT];
-    let src_array = random_transform_array(&mut rng, COUNT);
-    let axis_array: Vec<Dir3> = random_array(&mut rng, COUNT);
-    let angle_array: Vec<f32> = random_array(&mut rng, COUNT);
+    let mut params = RotateAxisParams {
+        dst_array: &mut vec![Transform::IDENTITY; COUNT],
+        src_array: &random_transform_array(&mut rng, COUNT),
+        axis_array: &random_array(&mut rng, COUNT),
+        angle_array: &random_array(&mut rng, COUNT),
+    };
 
     group.bench_function(format!("count = {COUNT}, normalize = false"), |b| {
         b.iter(|| {
-            rotate_axis_normalize_false_outer(
-                &mut dst_array,
-                &src_array,
-                &axis_array,
-                &angle_array,
-            );
+            rotate_axis_normalize_false_outer(&mut params);
         })
     });
 
     group.bench_function(format!("count = {COUNT}, normalize = true"), |b| {
         b.iter(|| {
-            rotate_axis_normalize_true_outer(&mut dst_array, &src_array, &axis_array, &angle_array);
+            rotate_axis_normalize_true_outer(&mut params);
         })
     });
 
     group.bench_function(format!("count = {COUNT}, normalize = reactive"), |b| {
         b.iter(|| {
-            rotate_axis_normalize_reactive_outer(
-                &mut dst_array,
-                &src_array,
-                &axis_array,
-                &angle_array,
-            );
+            rotate_axis_normalize_reactive_outer(&mut params);
         })
     });
 }
