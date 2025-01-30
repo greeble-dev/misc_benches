@@ -1,9 +1,36 @@
-use std::{iter::repeat_with, mem::size_of, num::NonZero, thread, time::Duration};
-
 use bevy_math::Dir3;
 use bevy_transform::components::Transform;
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, Throughput};
 use rand::{distributions::Standard, prelude::*};
+use std::{iter::repeat_with, mem::size_of, num::NonZero, thread, time::Duration};
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
+
+pub fn system(_: &mut Criterion) {
+    let sys = System::new_with_specifics(
+        RefreshKind::new()
+            .with_cpu(CpuRefreshKind::new())
+            .with_memory(MemoryRefreshKind::new().with_ram()),
+    );
+
+    println!(
+        "os: {} / {}",
+        System::long_os_version().unwrap_or_else(|| String::from("not available")),
+        System::kernel_version().unwrap_or_else(|| String::from("not available")),
+    );
+
+    println!(
+        "cpu: {}",
+        sys.cpus()
+            .first()
+            .map(|cpu| cpu.brand().trim().to_string())
+            .unwrap_or_else(|| String::from("not available")),
+    );
+
+    println!(
+        "mem: {:.1} GiB",
+        sys.total_memory() as f64 * (1.0 / (1024.0 * 1024.0 * 1024.0))
+    );
+}
 
 #[inline(never)]
 fn memcpy_inner(dst: &mut [u8], src: &[u8]) {
@@ -256,6 +283,7 @@ pub fn rotate_axis_normalize(c: &mut Criterion) {
 
 criterion_group!(
     benches,
+    system,
     memcpy,
     rand,
     transform_normalize,

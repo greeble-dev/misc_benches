@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bevy_math = "0.15"
+bevy_transform = "0.15"
 criterion = "0.5.1"
 rand = "0.8"
-bevy_transform = "0.15"
-bevy_math = "0.15"
+sysinfo = "0.32"
 
 [[bench]]
 name = "benches"
