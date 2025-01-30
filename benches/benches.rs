@@ -165,6 +165,17 @@ fn rotate_axis_normalize_true(dst: &mut Transform, src: Transform, axis: Dir3, a
     dst.rotation = dst.rotation.normalize();
 }
 
+fn rotate_axis_normalize_reactive(dst: &mut Transform, src: Transform, axis: Dir3, angle: f32) {
+    *dst = src;
+    dst.rotate_axis(axis, angle);
+
+    let l = dst.rotation.length_squared();
+
+    if (1.0 - l).abs() > 0.0001 {
+        dst.rotation = dst.rotation / l.sqrt();
+    }
+}
+
 fn rotate_axis_normalize_inner<F>(
     dst_array: &mut [Transform],
     src_array: &[Transform],
@@ -216,6 +227,22 @@ fn rotate_axis_normalize_true_outer(
     );
 }
 
+#[inline(never)]
+fn rotate_axis_normalize_reactive_outer(
+    dst_array: &mut [Transform],
+    src_array: &[Transform],
+    axis_array: &[Dir3],
+    angle_array: &[f32],
+) {
+    rotate_axis_normalize_inner(
+        dst_array,
+        src_array,
+        axis_array,
+        angle_array,
+        rotate_axis_normalize_reactive,
+    );
+}
+
 pub fn rotate_axis_normalize(c: &mut Criterion) {
     let mut group = c.benchmark_group("rotate_axis_normalize");
 
@@ -244,6 +271,17 @@ pub fn rotate_axis_normalize(c: &mut Criterion) {
     group.bench_function(format!("count = {COUNT}, normalize = true"), |b| {
         b.iter(|| {
             rotate_axis_normalize_true_outer(&mut dst_array, &src_array, &axis_array, &angle_array);
+        })
+    });
+
+    group.bench_function(format!("count = {COUNT}, normalize = reactive"), |b| {
+        b.iter(|| {
+            rotate_axis_normalize_reactive_outer(
+                &mut dst_array,
+                &src_array,
+                &axis_array,
+                &angle_array,
+            );
         })
     });
 }
