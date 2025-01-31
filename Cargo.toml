@@ -7,8 +7,13 @@ edition = "2021"
 bevy_math = "0.15"
 bevy_transform = "0.15"
 criterion = "0.5.1"
+libm = { version = "0.2", optional = true, default-features = false }
 rand = "0.8"
 sysinfo = "0.32"
+glam = "0.29"
+
+[features]
+libm = ["dep:libm", "glam/libm"]
 
 [[bench]]
 name = "benches"

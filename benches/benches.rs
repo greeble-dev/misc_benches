@@ -1,6 +1,7 @@
 use bevy_math::Dir3;
 use bevy_transform::components::Transform;
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, Throughput};
+use glam::Quat;
 use rand::{distributions::Standard, prelude::*};
 use std::{iter::repeat_with, mem::size_of, num::NonZero, thread, time::Duration};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
@@ -196,6 +197,17 @@ pub fn transform_normalize(c: &mut Criterion) {
     });
 }
 
+trait FastRenormalize {
+    fn fast_renormalize(self) -> Self;
+}
+
+impl FastRenormalize for Quat {
+    fn fast_renormalize(self) -> Self {
+        let length_squared = self.length_squared();
+        self * (0.5 * (3.0 - length_squared))
+    }
+}
+
 fn rotate_axis_normalize_false(dst: &mut Transform, src: Transform, axis: Dir3, angle: f32) {
     *dst = src;
     dst.rotate_axis(axis, angle);
@@ -216,6 +228,12 @@ fn rotate_axis_normalize_reactive(dst: &mut Transform, src: Transform, axis: Dir
     if (1.0 - l).abs() > 0.0001 {
         dst.rotation = dst.rotation / l.sqrt();
     }
+}
+
+fn rotate_axis_normalize_fast(dst: &mut Transform, src: Transform, axis: Dir3, angle: f32) {
+    *dst = src;
+    dst.rotate_axis(axis, angle);
+    dst.rotation = dst.rotation.fast_renormalize();
 }
 
 struct RotateAxisParams<'a> {
@@ -254,6 +272,11 @@ fn rotate_axis_normalize_reactive_outer(params: &mut RotateAxisParams) {
     rotate_axis_normalize_inner(params, rotate_axis_normalize_reactive);
 }
 
+#[inline(never)]
+fn rotate_axis_normalize_fast_outer(params: &mut RotateAxisParams) {
+    rotate_axis_normalize_inner(params, rotate_axis_normalize_fast);
+}
+
 pub fn rotate_axis_normalize(c: &mut Criterion) {
     let mut group = c.benchmark_group("rotate_axis_normalize");
 
@@ -287,6 +310,107 @@ pub fn rotate_axis_normalize(c: &mut Criterion) {
             rotate_axis_normalize_reactive_outer(&mut params);
         })
     });
+
+    group.bench_function(format!("count = {COUNT}, normalize = fast"), |b| {
+        b.iter(|| {
+            rotate_axis_normalize_fast_outer(&mut params);
+        })
+    });
+}
+
+fn single_normalize_false(dst: &mut Transform, src: Transform) {
+    dst.rotation = src.rotation;
+}
+
+fn single_normalize_true(dst: &mut Transform, src: Transform) {
+    dst.rotation = src.rotation.normalize();
+}
+
+fn single_normalize_reactive(dst: &mut Transform, src: Transform) {
+    let l = src.rotation.length_squared();
+
+    if (1.0 - l).abs() > 0.0001 {
+        dst.rotation = src.rotation / l.sqrt();
+    } else {
+        dst.rotation = src.rotation;
+    }
+}
+
+fn single_normalize_fast(dst: &mut Transform, src: Transform) {
+    dst.rotation = src.rotation.fast_renormalize();
+}
+
+struct SingleNormalizeParams<'a> {
+    dst_array: &'a mut [Transform],
+    src_array: &'a [Transform],
+}
+
+fn single_normalize_inner<F>(params: &mut SingleNormalizeParams, f: F)
+where
+    F: Fn(&mut Transform, Transform),
+{
+    for i in 0..params.dst_array.len() {
+        f(&mut params.dst_array[i], params.src_array[i]);
+    }
+}
+
+#[inline(never)]
+fn single_normalize_false_outer(params: &mut SingleNormalizeParams) {
+    single_normalize_inner(params, single_normalize_false);
+}
+
+#[inline(never)]
+fn single_normalize_true_outer(params: &mut SingleNormalizeParams) {
+    single_normalize_inner(params, single_normalize_true);
+}
+
+#[inline(never)]
+fn single_normalize_reactive_outer(params: &mut SingleNormalizeParams) {
+    single_normalize_inner(params, single_normalize_reactive);
+}
+
+#[inline(never)]
+fn single_normalize_fast_outer(params: &mut SingleNormalizeParams) {
+    single_normalize_inner(params, single_normalize_fast);
+}
+
+pub fn single_normalize(c: &mut Criterion) {
+    let mut group = c.benchmark_group("single_normalize");
+
+    const COUNT: usize = l1_sized_count::<(Transform, Transform)>();
+
+    group.throughput(Throughput::Elements(COUNT as u64));
+
+    let mut rng = StdRng::seed_from_u64(1234);
+
+    let mut params = SingleNormalizeParams {
+        dst_array: &mut vec![Transform::IDENTITY; COUNT],
+        src_array: &random_transform_array(&mut rng, COUNT),
+    };
+
+    group.bench_function(format!("count = {COUNT}, normalize = false"), |b| {
+        b.iter(|| {
+            single_normalize_false_outer(&mut params);
+        })
+    });
+
+    group.bench_function(format!("count = {COUNT}, normalize = true"), |b| {
+        b.iter(|| {
+            single_normalize_true_outer(&mut params);
+        })
+    });
+
+    group.bench_function(format!("count = {COUNT}, normalize = reactive"), |b| {
+        b.iter(|| {
+            single_normalize_reactive_outer(&mut params);
+        })
+    });
+
+    group.bench_function(format!("count = {COUNT}, normalize = fast"), |b| {
+        b.iter(|| {
+            single_normalize_fast_outer(&mut params);
+        })
+    });
 }
 
 criterion_group!(
@@ -295,7 +419,8 @@ criterion_group!(
     memcpy,
     rand,
     transform_normalize,
-    rotate_axis_normalize
+    rotate_axis_normalize,
+    single_normalize,
 );
 
 criterion_main!(benches);
