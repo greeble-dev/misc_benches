@@ -4,17 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_math = "0.15"
-bevy_transform = "0.15"
+bevy_math = { version = "0.15", default-features = false, features = ["rand"] }
+bevy_transform = { version = "0.15", default-features = false }
 criterion = "0.5.1"
 libm = { version = "0.2", optional = true, default-features = false }
 rand = "0.8"
 sysinfo = "0.32"
-glam = "0.29"
+glam = { version = "0.29", features = ["rand"] }
 
 [features]
 libm = ["dep:libm", "glam/libm"]
+scalar-math = ["glam/scalar-math"]
 
 [[bench]]
 name = "benches"
+harness = false
+
+[[bench]]
+name = "normalize"
 harness = false
