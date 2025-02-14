@@ -24,9 +24,13 @@ name = "benches"
 harness = false
 
 [[bench]]
-name = "normalize"
+name = "easing"
 harness = false
 
 [[bench]]
-name = "easing"
+name = "lerp"
+harness = false
+
+[[bench]]
+name = "normalize"
 harness = false
