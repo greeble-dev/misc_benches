@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_math = { version = "0.15", default-features = false, features = ["rand"] }
+bevy_math = { version = "0.15", default-features = false, features = [
+	"rand",
+	"curve",
+] }
 bevy_transform = { version = "0.15", default-features = false }
 criterion = "0.5.1"
 libm = { version = "0.2", optional = true, default-features = false }
@@ -22,4 +25,8 @@ harness = false
 
 [[bench]]
 name = "normalize"
+harness = false
+
+[[bench]]
+name = "easing"
 harness = false

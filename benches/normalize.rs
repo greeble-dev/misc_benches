@@ -2,28 +2,8 @@ use bevy_math::Dir3;
 use bevy_transform::components::Transform;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use glam::Quat;
-use rand::{distributions::Standard, prelude::*};
-use std::mem::size_of;
-
-// Return how many values of T can comfortably fit in L1.
-const fn l1_sized_count<T>() -> usize {
-    (16 * 1024) / size_of::<T>()
-}
-
-fn random_transform_array<R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<Transform> {
-    Standard
-        .sample_iter(rng)
-        .map(Transform::from_rotation)
-        .take(count)
-        .collect()
-}
-
-fn random_array<T, R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<T>
-where
-    Standard: Distribution<T>,
-{
-    Standard.sample_iter(rng).take(count).collect()
-}
+use misc_benches::util::*;
+use rand::prelude::*;
 
 fn mul_normalize_false(l: &Transform, r: &Transform) -> Transform {
     Transform {
