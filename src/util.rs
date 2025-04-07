@@ -11,7 +11,7 @@ pub const fn l2_sized_count<T>() -> usize {
     (512 * 1024) / size_of::<T>()
 }
 
-pub fn random_transform_array<R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<Transform> {
+pub fn random_transform_array(rng: &mut impl Rng, count: usize) -> Vec<Transform> {
     Standard
         .sample_iter(rng)
         .map(Transform::from_rotation)
@@ -19,7 +19,7 @@ pub fn random_transform_array<R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec
         .collect()
 }
 
-pub fn random_array<T, R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<T>
+pub fn random_array<T>(rng: &mut impl Rng, count: usize) -> Vec<T>
 where
     Standard: Distribution<T>,
 {

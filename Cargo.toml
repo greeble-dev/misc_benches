@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_math = { version = "0.15", default-features = false, features = [
+bevy_math = { path = "../bevy/crates/bevy_math", default-features = false, features = [
 	"rand",
 	"curve",
+	"std",
 ] }
-bevy_transform = { version = "0.15", default-features = false }
+bevy_transform = { path = "../bevy/crates/bevy_transform", default-features = false }
 criterion = "0.5.1"
 libm = { version = "0.2", optional = true, default-features = false }
 rand = "0.8"
